@@ -1,0 +1,16 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+.coverage
+htmlcov/
+results/*
+!results/.gitkeep
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,114 @@
+{
+  "config": {
+    "horizon_minutes": 1440,
+    "slot_minutes": 15,
+    "objectives": [
+      "max_jobs",
+      "min_wait"
+    ],
+    "search_timeout_seconds": 30,
+    "use_mrv": false,
+    "use_forward_checking": false,
+    "use_backjumping": false,
+    "use_mac": false
+  },
+  "servers": [
+    {
+      "server_id": "gpu",
+      "cpu_capacity": 4,
+      "ram_capacity_gb": 16,
+      "gpu_capacity": 1,
+      "storage_capacity_gb": 100
+    },
+    {
+      "server_id": "cpu",
+      "cpu_capacity": 4,
+      "ram_capacity_gb": 16,
+      "gpu_capacity": 0,
+      "storage_capacity_gb": 100
+    },
+    {
+      "server_id": "small",
+      "cpu_capacity": 2,
+      "ram_capacity_gb": 8,
+      "gpu_capacity": 0,
+      "storage_capacity_gb": 50
+    }
+  ],
+  "jobs": [
+    {
+      "job_id": "early",
+      "cpu": 4,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 15
+    },
+    {
+      "job_id": "conflict",
+      "cpu": 4,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 15,
+      "required_server_id": "gpu"
+    },
+    {
+      "job_id": "boundary",
+      "cpu": 4,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 15,
+      "deadline_minute": 30,
+      "required_server_id": "gpu"
+    },
+    {
+      "job_id": "parallel",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 15,
+      "required_server_id": "cpu"
+    },
+    {
+      "job_id": "outside",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 1440,
+      "deadline_minute": 1455
+    },
+    {
+      "job_id": "invalid-window",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 30,
+      "release_minute": 0,
+      "deadline_minute": 15
+    }
+  ],
+  "expected": {
+    "greedy_count": 3,
+    "csp_max_count": 3,
+    "invalid": [
+      "invalid-window"
+    ],
+    "greedy_unscheduled": [
+      "conflict",
+      "outside"
+    ]
+  }
+}

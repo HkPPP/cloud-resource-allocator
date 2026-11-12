@@ -1,0 +1,112 @@
+{
+  "config": {
+    "horizon_minutes": 1440,
+    "slot_minutes": 15,
+    "objectives": [
+      "max_jobs",
+      "min_wait"
+    ],
+    "search_timeout_seconds": 30,
+    "use_mrv": false,
+    "use_forward_checking": false,
+    "use_backjumping": false,
+    "use_mac": false
+  },
+  "servers": [
+    {
+      "server_id": "gpu",
+      "cpu_capacity": 4,
+      "ram_capacity_gb": 16,
+      "gpu_capacity": 1,
+      "storage_capacity_gb": 100
+    },
+    {
+      "server_id": "cpu",
+      "cpu_capacity": 4,
+      "ram_capacity_gb": 16,
+      "gpu_capacity": 0,
+      "storage_capacity_gb": 100
+    },
+    {
+      "server_id": "small",
+      "cpu_capacity": 2,
+      "ram_capacity_gb": 8,
+      "gpu_capacity": 0,
+      "storage_capacity_gb": 50
+    }
+  ],
+  "jobs": [
+    {
+      "job_id": "j1",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 60
+    },
+    {
+      "job_id": "j2",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 60
+    },
+    {
+      "job_id": "j3",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 60
+    },
+    {
+      "job_id": "j4",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 60
+    },
+    {
+      "job_id": "j5",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 60
+    },
+    {
+      "job_id": "j6",
+      "cpu": 1,
+      "ram_gb": 1,
+      "gpu": 0,
+      "storage_gb": 0,
+      "duration_minutes": 15,
+      "release_minute": 0,
+      "deadline_minute": 60
+    }
+  ],
+  "expected": {
+    "greedy_count": 6,
+    "csp_max_count": 6,
+    "greedy_starts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+}

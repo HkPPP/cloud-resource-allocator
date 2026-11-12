@@ -1,0 +1,62 @@
+[
+  {
+    "job_id": "j1",
+    "cpu": 1,
+    "ram_gb": 1,
+    "gpu": 0,
+    "storage_gb": 0,
+    "duration_minutes": 15,
+    "release_minute": 0,
+    "deadline_minute": 60
+  },
+  {
+    "job_id": "j2",
+    "cpu": 1,
+    "ram_gb": 1,
+    "gpu": 0,
+    "storage_gb": 0,
+    "duration_minutes": 15,
+    "release_minute": 0,
+    "deadline_minute": 60
+  },
+  {
+    "job_id": "j3",
+    "cpu": 1,
+    "ram_gb": 1,
+    "gpu": 0,
+    "storage_gb": 0,
+    "duration_minutes": 15,
+    "release_minute": 0,
+    "deadline_minute": 60
+  },
+  {
+    "job_id": "j4",
+    "cpu": 1,
+    "ram_gb": 1,
+    "gpu": 0,
+    "storage_gb": 0,
+    "duration_minutes": 15,
+    "release_minute": 0,
+    "deadline_minute": 60
+  },
+  {
+    "job_id": "j5",
+    "cpu": 1,
+    "ram_gb": 1,
+    "gpu": 0,
+    "storage_gb": 0,
+    "duration_minutes": 15,
+    "release_minute": 0,
+    "deadline_minute": 60
+  },
+  {
+    "job_id": "j6",
+    "cpu": 1,
+    "ram_gb": 1,
+    "gpu": 0,
+    "storage_gb": 0,
+    "duration_minutes": 15,
+    "release_minute": 0,
+    "deadline_minute": 60
+  }
+]

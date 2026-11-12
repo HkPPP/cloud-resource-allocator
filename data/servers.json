@@ -1,0 +1,23 @@
+[
+  {
+    "server_id": "gpu",
+    "cpu_capacity": 4,
+    "ram_capacity_gb": 16,
+    "gpu_capacity": 1,
+    "storage_capacity_gb": 100
+  },
+  {
+    "server_id": "cpu",
+    "cpu_capacity": 4,
+    "ram_capacity_gb": 16,
+    "gpu_capacity": 0,
+    "storage_capacity_gb": 100
+  },
+  {
+    "server_id": "small",
+    "cpu_capacity": 2,
+    "ram_capacity_gb": 8,
+    "gpu_capacity": 0,
+    "storage_capacity_gb": 50
+  }
+]

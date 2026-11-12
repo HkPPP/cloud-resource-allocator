@@ -1,0 +1,13 @@
+{
+  "horizon_minutes": 1440,
+  "slot_minutes": 15,
+  "objectives": [
+    "max_jobs",
+    "min_wait"
+  ],
+  "search_timeout_seconds": 30,
+  "use_mrv": false,
+  "use_forward_checking": false,
+  "use_backjumping": false,
+  "use_mac": false
+}
