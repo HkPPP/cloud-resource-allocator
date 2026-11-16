@@ -27,7 +27,20 @@ class PreparedInstance:
     domains: tuple[tuple[str, tuple[DomainValue, ...]], ...]
 
 def validate_config(config: SchedulerConfig) -> None:
-    """Delegate to config.validate(); invalid global settings raise ValueError."""
+    """Delegate to config.validate(); invalid global settings raise ValueError.
+
+    Args:
+        config: Scheduling settings defining the integer-minute horizon, slot resolution
+            and solver options.
+
+    Returns:
+        None: Configuration satisfies global rules; errors abort the run rather than
+            classifying individual jobs.
+
+    Raises:
+        ValueError: The configuration does not satisfy SchedulerConfig rules.
+        NotImplementedError: This feature is not yet implemented.
+    """
     raise NotImplementedError('Shared configuration boundary is not implemented.')
 
 def validate_servers(servers: Sequence[Server]) -> tuple[Server, ...]:
@@ -35,6 +48,18 @@ def validate_servers(servers: Sequence[Server]) -> tuple[Server, ...]:
 
     Raise ValueError for duplicate/empty IDs, negative/nonfinite capacity, boolean
     quantities, or noninteger CPU/GPU. No partial inventory is silently accepted.
+
+    Args:
+        servers: Server inventory in original input order; an empty inventory is
+            permitted.
+
+    Returns:
+        tuple[Server, ...]: Validated inventory in original order, or an empty tuple for
+            an empty cluster.
+
+    Raises:
+        ValueError: Inventory IDs or resource quantities are malformed or duplicated.
+        NotImplementedError: This feature is not yet implemented.
     """
     raise NotImplementedError('Server validation is not implemented.')
 
@@ -49,6 +74,20 @@ def validate_jobs(jobs: Sequence[RawJob], config: SchedulerConfig) -> tuple[tupl
     the horizon. Lack of suitable hardware is not an input error. Do not mutate
     raw records. Stable error codes include MISSING_FIELD, DUPLICATE_ID,
     INVALID_RESOURCE, INVALID_DURATION, INVALID_TIME, MISALIGNED_TIME.
+
+    Args:
+        jobs: Original submissions in input order, including raw malformed records.
+            Per-record identity is the zero-based position in this sequence.
+        config: Scheduling settings defining the integer-minute horizon, slot resolution
+            and solver options.
+
+    Returns:
+        tuple[tuple[Job, ...], tuple[InvalidJob, ...]]: Normalized valid jobs and
+            per-record structured errors. Each malformed or duplicate submission retains
+            its original index; omitted defaults are resolved from config.
+
+    Raises:
+        NotImplementedError: This feature is not yet implemented.
     """
     raise NotImplementedError('Per-record job validation is not implemented.')
 
@@ -57,13 +96,32 @@ def validate_references(jobs: Sequence[Job], servers: Sequence[Server], invalid_
 
     Reject unknown server/job IDs, self anti-affinity, and the same direct pair
     requesting both same and different servers (invalidate both endpoints).
-    Self co-location is redundant and removed. A known invalid target is omitted,
+    Self co-location is redundant and removed. Repeated direct edges are
+    deduplicated without changing their meaning. A known invalid target is omitted,
     not cascaded into invalidity. Unknown-reference errors belong to the declarer.
     Use input_indices (valid unique ID to original index) for indexed errors.
     Never take transitive closure: A=B and B=C impose no A=C constraint if B is
     skipped. Opposite pins on a same-server pair and longer contradictory cycles
     are valid inputs restricting which subsets can be scheduled.
     Codes: UNKNOWN_SERVER, UNKNOWN_JOB, CONTRADICTORY_RELATIONSHIP.
+
+    Args:
+        jobs: Individually valid normalized jobs before reference normalization;
+            original IDs and indices remain available for attribution.
+        servers: Server inventory in original input order; an empty inventory is
+            permitted.
+        invalid_jobs: Errors already associated with original submissions; their IDs
+            distinguish known invalid targets from unknown references.
+        input_indices: Mapping from each valid unique job ID to its original zero-based
+            submission index, before invalid records were removed.
+
+    Returns:
+        tuple[tuple[Job, ...], tuple[InvalidJob, ...]]: Surviving jobs with symmetric
+            direct edges, and newly discovered indexed reference errors. Previously
+            supplied errors remain the caller's responsibility to merge by index.
+
+    Raises:
+        NotImplementedError: This feature is not yet implemented.
     """
     raise NotImplementedError('Reference validation and normalization is not implemented.')
 
@@ -74,5 +132,22 @@ def preprocess_inputs(jobs: Sequence[RawJob], servers: Sequence[Server], config:
     Every input index must occur exactly once among valid jobs and errors. Error
     records merge codes per submission. Build relationship normalization from
     original direct declarations, then remove invalid endpoints without cascading.
+
+    Args:
+        jobs: Original submissions in input order, including raw malformed records.
+            Per-record identity is the zero-based position in this sequence.
+        servers: Server inventory in original input order; an empty inventory is
+            permitted.
+        config: Scheduling settings defining the integer-minute horizon, slot resolution
+            and solver options.
+
+    Returns:
+        PreparedInstance: Deeply immutable preparation with initial domains, merged
+            indexed errors and one accounted identity for every original submission.
+
+    Raises:
+        ValueError: Configuration or server inventory is invalid. Individual job errors
+            are returned in the prepared instance.
+        NotImplementedError: This feature is not yet implemented.
     """
     raise NotImplementedError('Shared preparation pipeline is not implemented.')

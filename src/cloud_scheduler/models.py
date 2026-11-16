@@ -19,13 +19,35 @@ class ResourceVector:
     storage_gb: float = 0
 
     def __add__(self, other: ResourceVector) -> ResourceVector:
-        """Return component-wise sum without mutating either operand; zero is identity."""
+        """Return component-wise sum without mutating either operand; zero is identity.
+
+        Args:
+            other: Second resource vector, expressed in CPU cores, RAM GB, GPU count and
+                storage GB.
+
+        Returns:
+            ResourceVector: New component-wise sum; neither input is modified.
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
+        """
         raise NotImplementedError('Resource addition is not implemented.')
 
     def __sub__(self, other: ResourceVector) -> ResourceVector:
         """Return component-wise difference; signed intermediate vectors are permitted.
 
         Resource accounting callers must separately prevent negative actual usage.
+
+        Args:
+            other: Second resource vector, expressed in CPU cores, RAM GB, GPU count and
+                storage GB.
+
+        Returns:
+            ResourceVector: New component-wise difference, including signed intermediate
+                values; neither input is modified.
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
         """
         raise NotImplementedError('Resource subtraction is not implemented.')
 
@@ -33,6 +55,17 @@ class ResourceVector:
         """Return whether every component is <= capacity, including exact equality.
 
         Inputs are validated resource vectors; comparison must examine all four units.
+
+        Args:
+            capacity: Resource limits in the same four units as this vector; equality is
+                permitted for each component.
+
+        Returns:
+            bool: True exactly when every demand component is no greater than the
+                corresponding capacity component.
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
         """
         raise NotImplementedError('Component-wise comparison is not implemented.')
 
@@ -46,11 +79,34 @@ class Server:
     storage_capacity_gb: float = 0
 
     def capacity(self) -> ResourceVector:
-        """Return this server's four capacities in standard resource units."""
+        """Return this server's four capacities in standard resource units.
+
+        Args:
+            None. Uses the current instance only.
+
+        Returns:
+            ResourceVector: CPU cores, RAM GB, GPU count and storage GB available on
+                this server.
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
+        """
         raise NotImplementedError('Capacity vector is not implemented.')
 
     def supports(self, job: Job) -> bool:
-        """Check individual resource fit only; ignore time, pinning and other jobs."""
+        """Check individual resource fit only; ignore time, pinning and other jobs.
+
+        Args:
+            job: Validated job whose resource demands, time window and placement
+                relationships are being examined.
+
+        Returns:
+            bool: True if the job individually fits all hardware capacities. Time, pins,
+                affinity and current usage are deliberately excluded.
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
+        """
         raise NotImplementedError('Individual hardware fit is not implemented.')
 
 @dataclass(frozen=True)
@@ -76,15 +132,49 @@ class Job:
         """Return resolved deadline minus duration; require a prepared job.
 
         Raise ValueError if deadline is still None; horizon clipping belongs in domains.
+
+        Args:
+            None. Uses the current instance only.
+
+        Returns:
+            int: Resolved deadline minus duration in integer minutes; this value is not
+                clipped to the scheduling horizon.
+
+        Raises:
+            ValueError: The deadline has not been resolved from configuration.
+            NotImplementedError: This feature is not yet implemented.
         """
         raise NotImplementedError('Latest start is not implemented.')
 
     def resource_requirements(self) -> ResourceVector:
-        """Return the job's four demands without considering any server or time."""
+        """Return the job's four demands without considering any server or time.
+
+        Args:
+            None. Uses the current instance only.
+
+        Returns:
+            ResourceVector: This job's CPU, RAM, GPU and storage demands, independent of
+                placement.
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
+        """
         raise NotImplementedError('Requirements vector is not implemented.')
 
     def execution_interval(self, start_minute: int) -> tuple[int, int]:
-        """Return [start, start + duration) endpoints; feasibility is checked separately."""
+        """Return [start, start + duration) endpoints; feasibility is checked separately.
+
+        Args:
+            start_minute: Integer start time in minutes from horizon origin. This helper
+                computes endpoints without deciding feasibility.
+
+        Returns:
+            tuple[int, int]: Start and exclusive end minute, representing [start, start
+                + duration).
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
+        """
         raise NotImplementedError('Interval endpoints is not implemented.')
 
 @dataclass(frozen=True)

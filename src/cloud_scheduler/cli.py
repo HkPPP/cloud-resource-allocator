@@ -10,6 +10,18 @@ def main(argv: list[str] | None = None) -> int:
     Unavailable features exit with status 2 and an explanatory message.
     File and validation errors receive concise messages. Schedule execution and
     result serialization are not yet implemented; argument help is available.
+
+    Args:
+        argv: Command-line arguments without the executable name. None reads
+            sys.argv[1:]; an empty list uses parser defaults.
+
+    Returns:
+        int: Zero on successful execution once the scheduling pipeline is available.
+            Help and error paths exit with SystemExit instead of returning.
+
+    Raises:
+        SystemExit: Zero for help, or two for argument, file, validation and
+            unavailable-feature errors.
     """
     parser = argparse.ArgumentParser(description="Intelligent Cloud Resource Scheduler")
     parser.add_argument("--config", default="config/default.json")

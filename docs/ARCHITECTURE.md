@@ -4,6 +4,11 @@ See [component interaction diagrams](COMPONENT_INTERACTIONS.md) for the input
 pipeline, solver internals, independent evaluation and benchmark flow.
 You can also [open the diagram as an image](diagrams/component-interactions.png).
 
+Function docstrings describe purpose, each explicit parameter in an `Args`
+section, and return values in a `Returns` section. Units, empty cases, mutation
+rules and relevant exceptions are included in the contract. The documentation
+test checks that these sections and parameter descriptions remain present.
+
 ## Modules and classes
 
 | Module | Responsibility |

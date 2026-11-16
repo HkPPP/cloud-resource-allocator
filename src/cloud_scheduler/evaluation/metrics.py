@@ -36,5 +36,24 @@ class MetricsCalculator:
         jobs only. Propagate runtime, nodes, timeout and proof fields unchanged.
         Empty/zero-denominator values follow MetricsReport's None convention.
         Do not round internally; report formatting may convert fractions to percent.
+
+        Args:
+            result: Independently validated ScheduleResult whose assignments, indexed
+                classifications and performance fields are used to compute metrics.
+            jobs: Resolved valid submitted jobs only, including valid unscheduled jobs
+                but excluding INVALID records; their count is the completion
+                denominator.
+            servers: Server inventory in original input order; an empty inventory is
+                permitted.
+            config: Scheduling settings defining the integer-minute horizon, slot
+                resolution and solver options.
+
+        Returns:
+            MetricsReport: Quality and full-horizon utilization fractions plus copied
+                runtime, node, timeout and proof fields. Undefined denominators produce
+                None, not zero.
+
+        Raises:
+            NotImplementedError: This feature is not yet implemented.
         """
         raise NotImplementedError('Measured metrics is not implemented.')

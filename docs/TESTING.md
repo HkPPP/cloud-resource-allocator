@@ -35,6 +35,16 @@ execution test when the input-loading and scheduling pipeline is available.
 
 ## Correctness tests
 
+| Area | Additional boundaries and invariants |
+| --- | --- |
+| Constraints | Exact limits for all four resources; three overlapping jobs; conflicts in the last occupied slot; both `can_place` entry points; accepted and rejected checks leave state unchanged. |
+| Relationships | Both declaration directions; multiple assigned neighbors; unrelated jobs; omitted intermediates; affinity across non-overlapping intervals. |
+| State | Interior-minute slot queries; unknown servers; invalid query bounds; duplicate placement; missing undo; overlapping undo; exact fractional-resource restoration; protected assignment snapshots. |
+| Preprocessing and domains | Malformed scalar records; missing identity; invalid numeric types; nonfinite quantities; original input order and indices; duplicate edges; empty inputs; horizon clipping; pins that cannot satisfy hardware demands. |
+| Greedy and CSP | Empty batches and clusters; earlier start versus server order; delayed placement; invalid records within a batch; MRV ties and empty selection; domain ordering; singleton omission after filtering. |
+| Objectives and evaluation | Empty objective values; invalid priority lists; comparison symmetry; release-relative wait; every resource overflow; independent validator access; false invalid classifications; idle-server capacity-time denominators. |
+| I/O | Missing files; JSON root-type preservation; malformed semantic configuration; non-array job roots; existing Unicode, space and BOM checks. |
+
 Tests verify observable outcomes rather than private array or trail layouts.
 Small prepared-input fixtures declare candidate domains explicitly. Scenario
 expected values define acceptance criteria, separate from benchmark measurements.

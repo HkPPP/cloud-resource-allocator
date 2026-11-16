@@ -21,5 +21,22 @@ class BenchmarkRunner:
         Preserve solver configuration fairness, report actual observations only,
         and aggregate boolean timeouts over all completed benchmark attempts.
         Correctness tests must not assert machine-specific timing thresholds.
+
+        Args:
+            schedulers: Scheduler instances to benchmark in sequence; each run receives
+                private mutable state. Empty sequences produce an empty report.
+            prepared: Immutable normalized input containing valid jobs, servers,
+                configuration, initial domains, indexed errors and original submission
+                identities.
+            repetitions: Positive number of measured solve calls per scheduler; shared
+                preprocessing is excluded from solve timing.
+
+        Returns:
+            BenchmarkReport: Independently validated per-run metrics and timed-out-run
+                fraction; empty schedulers yield empty runs and timeout_rate=None.
+
+        Raises:
+            ValueError: repetitions is less than one.
+            NotImplementedError: This feature is not yet implemented.
         """
         raise NotImplementedError('Benchmark orchestration is not implemented.')

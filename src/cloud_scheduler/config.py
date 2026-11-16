@@ -29,5 +29,17 @@ class SchedulerConfig:
 
         Validate the rules above before job validation; configuration errors abort
         a run and must not be converted to individual INVALID job records.
+
+        Args:
+            None. Uses the current instance only.
+
+        Returns:
+            None: Successful validation has no return value and does not modify the
+                frozen configuration.
+
+        Raises:
+            ValueError: A type, range, resolution, objective or option-combination rule
+                is violated.
+            NotImplementedError: This feature is not yet implemented.
         """
         raise NotImplementedError('Configuration validation is not implemented.')
