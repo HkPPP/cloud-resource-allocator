@@ -22,11 +22,26 @@ class ScheduleState:
         Returns:
             None: Initializes the current state with no assignments and zero resource
                 usage; does not change the prepared input.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ScheduleState.__init__ is not implemented.')
+        self.prepared = prepared
+
+        self._servers = {
+            server.server_id: server for server in prepared.servers
+        }
+
+        self._assignments: dict[str, Assignment] = {}
+
+        slot_count = (
+            prepared.config.horizon_minutes // prepared.config.slot_minutes
+        )
+
+        self._usage: dict[str, list[ResourceVector]] = {
+            server_id: [
+                ResourceVector() for _ in range(slot_count)
+            ]
+            for server_id in self._servers
+        }
+
 
     def can_place(self, job: Job, placement: Placement) -> bool:
         """Perform all hard checks without mutations; delegate shared checking logic.
@@ -40,11 +55,13 @@ class ScheduleState:
         Returns:
             bool: Whether all hard constraints permit this placement without changing
                 assignments, domains or usage.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ScheduleState.can_place is not implemented.')
+        # Prevent circular import 
+        from .constraints import ConstraintChecker
+
+        checker = ConstraintChecker()
+        return checker.can_place(job, placement, self)
+
 
     def place(self, job: Job, placement: Placement) -> Assignment:
         """Atomically assign a feasible placement and increment every occupied slot.
@@ -63,9 +80,47 @@ class ScheduleState:
         Raises:
             ValueError: The placement is infeasible or the job already has an
                 assignment; state remains unchanged.
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ScheduleState.place is not implemented.')
+        if not self.can_place(job, placement):
+            raise ValueError(
+                f"Cannot place job {job.job_id} on {placement.server_id}"
+            )
+
+        slot_minutes = self.prepared.config.slot_minutes
+        start = placement.start_minute
+        end = start + job.duration_minutes
+
+        first_slot = start // slot_minutes
+        end_slot = end // slot_minutes
+
+        # Calculate changes in a separate list first.
+        updated_usage = self._usage[placement.server_id].copy()
+
+        for slot in range(first_slot, end_slot):
+            current = updated_usage[slot]
+
+            updated_usage[slot] = ResourceVector(
+                cpu=current.cpu + job.cpu,
+                ram_gb=current.ram_gb + job.ram_gb,
+                gpu=current.gpu + job.gpu,
+                storage_gb=current.storage_gb + job.storage_gb,
+            )
+
+        input_indices = dict(self.prepared.input_indices)
+
+        assignment = Assignment(
+            job_id=job.job_id,
+            server_id=placement.server_id,
+            start_minute=start,
+            end_minute=end,
+            input_index=input_indices[job.job_id],
+        )
+
+        # Commit after validation and calculations have succeeded.
+        self._usage[placement.server_id] = updated_usage
+        self._assignments[job.job_id] = assignment
+
+        return assignment
 
     def undo(self, job_id: str) -> None:
         """Remove an existing assignment and restore exact prior resource usage.
@@ -100,10 +155,21 @@ class ScheduleState:
 
         Raises:
             KeyError: server_id is absent from the inventory.
+            TypeError: minute is not an int type
             ValueError: minute is outside the configured horizon.
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ScheduleState.get_usage is not implemented.')
+        if server_id not in self._servers:
+            raise KeyError(server_id)
+
+        if isinstance(minute, bool) or not isinstance(minute, int):
+            raise TypeError(f"Minute must be an integer, not {type(minute)}")
+
+        horizon = self.prepared.config.horizon_minutes
+        if not (0 <= minute < horizon):
+            raise ValueError(f"Minute is outside the scheduling horizon of 0 and {horizon}")
+
+        slot_index = minute // self.prepared.config.slot_minutes
+        return self._usage[server_id][slot_index]
 
     def get_assignments(self) -> Mapping[str, Assignment]:
         """Return an immutable view or detached snapshot keyed by unique valid job ID.
@@ -114,11 +180,8 @@ class ScheduleState:
         Returns:
             Mapping[str, Assignment]: Read-only view or detached snapshot of assigned
                 jobs. Changes through a returned object cannot alter state.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ScheduleState.get_assignments is not implemented.')
+        return self._assignments.copy()
 
     def copy(self) -> ScheduleState:
         """Return an independent mutable copy; prepared immutable input may be shared.
