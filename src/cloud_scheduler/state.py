@@ -135,9 +135,24 @@ class ScheduleState:
 
         Raises:
             KeyError: job_id is not currently assigned; state remains unchanged.
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ScheduleState.undo is not implemented.')
+        if job_id not in self._assignments:
+            raise KeyError(job_id)
+
+        assignment = self._assignments.pop(job_id)
+        start_slot = assignment.start_minute // self.prepared.config.slot_minutes
+        end_slot = assignment.end_minute // self.prepared.config.slot_minutes
+
+        updated_usage = self._usage[assignment.server_id].copy()
+        for slot in range(start_slot, end_slot):
+            current = updated_usage[slot]
+            updated_usage[slot] = ResourceVector(
+                cpu=current.cpu - self.prepared.jobs[job_id].cpu,
+                ram_gb=current.ram_gb - self.prepared.jobs[job_id].ram_gb,
+                gpu=current.gpu - self.prepared.jobs[job_id].gpu,
+                storage_gb=current.storage_gb - self.prepared.jobs[job_id].storage_gb,
+            )
+        self._usage[assignment.server_id] = updated_usage
 
     def get_usage(self, server_id: str, minute: int) -> ResourceVector:
         """Return a snapshot for the slot containing minute (0 <= minute < horizon).
@@ -193,8 +208,8 @@ class ScheduleState:
         Returns:
             ScheduleState: Independent state with identical assignments and usage;
                 immutable prepared data may be shared.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ScheduleState.copy is not implemented.')
+        new_state = ScheduleState(self.prepared)
+        new_state._assignments = self._assignments.copy()
+        new_state._usage = {k: v.copy() for k, v in self._usage.items()}
+        return new_state
