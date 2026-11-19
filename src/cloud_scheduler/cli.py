@@ -1,6 +1,6 @@
 """Command-line interface for scheduling configuration and execution."""
 import argparse
-from .io import load_config, load_jobs, load_servers
+from .io import load_config, load_jobs, load_servers, serialize_result
 from .schedulers.csp import CSPScheduler
 from .schedulers.greedy import GreedyScheduler
 
@@ -8,15 +8,16 @@ def main(argv: list[str] | None = None) -> int:
     """Parse explicit paths relative to the current directory and run the pipeline.
 
     Unavailable features exit with status 2 and an explanatory message.
-    File and validation errors receive concise messages. Schedule execution and
-    result serialization are not yet implemented; argument help is available.
+    File and validation errors receive concise messages. Successful execution
+    prints one complete JSON ScheduleResult to standard output. Unsupported
+    algorithms retain the explicit unavailable-feature error path.
 
     Args:
         argv: Command-line arguments without the executable name. None reads
             sys.argv[1:]; an empty list uses parser defaults.
 
     Returns:
-        int: Zero on successful execution once the scheduling pipeline is available.
+        int: Zero after the serialized schedule has been printed successfully.
             Help and error paths exit with SystemExit instead of returning.
 
     Raises:
@@ -35,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
         servers = load_servers(args.servers)
         scheduler = GreedyScheduler() if args.algorithm == "greedy" else CSPScheduler()
         result = scheduler.schedule(jobs, servers, config)
-        raise NotImplementedError('Schedule result serialization is not implemented.')
+        print(serialize_result(result))
+        return 0
     except (NotImplementedError, TypeError, ValueError, OSError) as error:
         parser.exit(2, f"{error}\n")

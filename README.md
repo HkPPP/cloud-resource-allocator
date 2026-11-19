@@ -4,11 +4,13 @@ A Python framework for offline batch scheduling across heterogeneous cloud
 servers, with time-window constraints and configurable optimization objectives.
 Requires **Python 3.11+** on **Ubuntu or Windows**.
 
-The project is in active development. Data models, JSON transport, package
-installation, CLI argument parsing and test infrastructure are available.
-Scheduling algorithms, preprocessing, constraint checking, objective evaluation,
-schedule validation and metrics are not yet implemented. Calls to unavailable
-features raise `NotImplementedError`. Benchmark results are not yet available.
+The project is in active development. JSON input loading, input validation,
+preprocessing, initial domain generation, constraint checking, resource tracking
+and Greedy First-Fit scheduling are available through the Python API and CLI.
+Successful CLI runs print an indented JSON ScheduleResult and exit with status 0.
+CSP search, objective evaluation, independent schedule validation, metrics and
+benchmarking remain unavailable and raise `NotImplementedError`. Benchmark
+results are not yet available.
 
 ## Setup on Ubuntu
 
@@ -79,20 +81,23 @@ Objectives are unique supported names in priority order: `max_jobs`, `min_wait`,
 first can intentionally favor scheduling no jobs. JSON arrays become immutable
 tuples during semantic loading. Optional advanced flags remain unavailable.
 
-The scheduling command interface is shown below. Execution becomes available
-when input loading and scheduling are implemented:
+Run Greedy from the repository root with either entry point:
 
 ```text
 python -m cloud_scheduler --algorithm greedy --config config/default.json --jobs data/jobs.json --servers data/servers.json
-python main.py --algorithm csp
+python main.py --algorithm greedy
 ```
 
 Here `python` means the venv interpreter shown above. The installed
 `cloud-scheduler` entry point is equivalent. Run these default relative paths from
 the repository root; explicit absolute paths work from other directories. Quote
-paths containing spaces. CLI execution currently exits 2 with a feature-unavailable message;
-it does not produce a schedule. Scenario bundles contain config/servers/jobs and
-expected outcomes for tests; the CLI accepts separate files, not bundle files.
+paths containing spaces. Standard output contains one JSON object with assignments,
+invalid jobs, unscheduled jobs, runtime, search nodes, timeout/proof status and
+algorithm statistics. Each job record retains its original input index. Empty
+collections are arrays, and absent optional values are null. Invalid input or an
+unavailable algorithm exits 2 with an error on standard error. CSP remains
+unavailable. Scenario bundles contain config/servers/jobs and expected outcomes
+for tests; the CLI accepts separate files, not bundle files.
 
 ## Scenario expectations
 
@@ -113,9 +118,9 @@ assignments may differ on tied scores. See the bundle's `expected` fields.
 
 ## Development roadmap
 
-Input validation is the next milestone: `SchedulerConfig.validate`,
-`validate_servers` and `validate_jobs`. Domain generation, constraint checking,
-scheduling and evaluation follow in dependency order.
+The Greedy pipeline, including input validation, domain generation and CLI output,
+is implemented. Next milestones are independent schedule validation, CSP search,
+objective optimization, metrics and benchmarking.
 
 See the [development roadmap](docs/IMPLEMENTATION_PLAN.md) for acceptance criteria.
 Tests for unavailable functionality use strict `xfail` limited to

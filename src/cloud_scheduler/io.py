@@ -1,13 +1,47 @@
 """Portable UTF-8 JSON transport and semantic loading interfaces."""
 import json
-from dataclasses import fields
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Sequence
 from .config import SchedulerConfig
-from .models import RawJob, Server
+from .models import RawJob, ScheduleResult, Server
 from .preprocessing import validate_servers
 
 PathLike = str | Path
+
+def serialize_result(result: ScheduleResult) -> str:
+    """Serialize a schedule result as indented, standards-compliant JSON.
+
+    Nested assignment and classification records become JSON objects, tuples
+    become arrays, and absent optional values become null. All performance and
+    proof fields are preserved. Non-ASCII characters are escaped so output is
+    portable across Windows and Ubuntu terminals without changing decoded IDs.
+    The result and its statistics mapping are not modified.
+
+    Args:
+        result: Schedule output containing assignments, invalid and unscheduled
+            submissions, runtime in milliseconds, search statistics and proof status.
+
+    Returns:
+        str: Indented JSON text containing every ScheduleResult field, without a
+            trailing newline. The caller can display the text or save it to a file.
+
+    Raises:
+        TypeError: A field or statistics value cannot be serialized as JSON.
+        ValueError: A numeric value is NaN or infinite.
+    """
+    payload = {
+        "algorithm": result.algorithm,
+        "assignments": [asdict(item) for item in result.assignments],
+        "invalid_jobs": [asdict(item) for item in result.invalid_jobs],
+        "unscheduled_jobs": [asdict(item) for item in result.unscheduled_jobs],
+        "runtime_ms": result.runtime_ms,
+        "search_nodes": result.search_nodes,
+        "timed_out": result.timed_out,
+        "optimality_proven": result.optimality_proven,
+        "statistics": dict(result.statistics),
+    }
+    return json.dumps(payload, indent=2, ensure_ascii=True, allow_nan=False)
 
 def read_json(path: PathLike) -> object:
     """Read UTF-8 JSON (including Windows BOM); preserve raw per-job records.

@@ -72,9 +72,8 @@ Malformed individual jobs become indexed `InvalidJob` records and remain in the
 final accounting. Valid jobs with no feasible placement become `UnscheduledJob`
 records. A global configuration or inventory error aborts the run.
 
-Evaluation is a separate step after `schedule()` returns. The current CLI
-does not yet connect evaluation or output serialization; those connections above
-show the intended application flow.
+Evaluation is a separate step after `schedule()` returns. The CLI serializes ScheduleResult as JSON. Independent evaluation is not yet
+connected; those connections above show the intended evaluation flow.
 
 ## Inside the selected solver
 

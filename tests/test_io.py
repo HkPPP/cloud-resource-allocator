@@ -342,3 +342,76 @@ def test_loaded_default_inputs_validate(repo_root):
     assert len(servers) == 3 and len(valid) == 6
     assert not invalid
     assert all(job.deadline_minute is not None for job in valid)
+
+
+def test_result_serialization_preserves_all_fields():
+    """Serialize all classifications and statistics without mutating the result.
+
+    Args:
+        None.
+
+    Returns:
+        None. Decoded JSON retains every public result field and original identity.
+    """
+    from types import MappingProxyType
+    from cloud_scheduler.models import Assignment, InvalidJob, ScheduleResult, UnscheduledJob
+    statistics = {'timing_scope':'solve', 'attempts':3, 'complete':False}
+    result = ScheduleResult(
+        algorithm='greedy',
+        assignments=(Assignment('tâche','serveur',15,30,0),),
+        invalid_jobs=(InvalidJob(1,None,('MISSING_FIELD',),('Missing job_id',)),),
+        unscheduled_jobs=(UnscheduledJob(2,'omitted'),),
+        runtime_ms=12.5, search_nodes=7, timed_out=True, optimality_proven=False,
+        statistics=MappingProxyType(statistics),
+    )
+    encoded = serialize_result(result)
+    decoded = json.loads(encoded)
+    assert decoded == {
+        'algorithm':'greedy',
+        'assignments':[{'job_id':'tâche','server_id':'serveur','start_minute':15,
+                        'end_minute':30,'input_index':0}],
+        'invalid_jobs':[{'input_index':1,'job_id':None,
+                         'error_codes':['MISSING_FIELD'],'reasons':['Missing job_id']}],
+        'unscheduled_jobs':[{'input_index':2,'job_id':'omitted','reason':None}],
+        'runtime_ms':12.5,'search_nodes':7,'timed_out':True,
+        'optimality_proven':False,'statistics':statistics,
+    }
+    assert encoded.isascii()
+    assert len(result.assignments) == 1 and result.invalid_jobs[0].job_id is None
+    assert dict(result.statistics) == statistics
+
+
+def test_empty_result_serialization():
+    """Represent empty classifications as arrays rather than null or omitted keys.
+
+    Args:
+        None.
+
+    Returns:
+        None. All result collections and statistics retain their JSON types.
+    """
+    from cloud_scheduler.models import ScheduleResult
+    decoded = json.loads(serialize_result(ScheduleResult('greedy')))
+    assert decoded['assignments'] == []
+    assert decoded['invalid_jobs'] == []
+    assert decoded['unscheduled_jobs'] == []
+    assert decoded['statistics'] == {}
+    assert decoded['runtime_ms'] == 0 and decoded['search_nodes'] == 0
+
+
+@pytest.mark.parametrize('value',[float('nan'),float('inf'),-float('inf')])
+@pytest.mark.parametrize('field',['runtime_ms','statistics'])
+def test_result_serialization_rejects_nonfinite_numbers(value, field):
+    """Reject nonstandard JSON numeric values before any CLI output is emitted.
+
+    Args:
+        value: Nonfinite floating-point value.
+        field: Result runtime or algorithm statistics containing the value.
+
+    Returns:
+        None. Serialization consistently raises ValueError.
+    """
+    from cloud_scheduler.models import ScheduleResult
+    changes = {field:({'score':value} if field == 'statistics' else value)}
+    with pytest.raises(ValueError):
+        serialize_result(ScheduleResult('greedy',**changes))
