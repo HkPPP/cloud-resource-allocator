@@ -1,8 +1,9 @@
 """Read-only hard-constraint checking contracts."""
 from typing import Mapping
 from .config import SchedulerConfig
-from .models import Assignment, Job, Placement, Server
+from .models import Assignment, Job, Placement, Server, ResourceVector
 from .state import ScheduleState
+from .time_utils import occupied_slots
 
 class ConstraintChecker:
     """All checks are pure; direct relationships are symmetric and conditional."""
@@ -23,12 +24,24 @@ class ConstraintChecker:
             bool: True if the aligned, continuous interval starts at or after release
                 and ends at or before both deadline and horizon. The exclusive end may
                 equal either bound.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.check_time_window is not implemented.')
+        start = placement.start_minute
 
+        if isinstance(start, bool) or not isinstance(start, int):
+            return False
+
+        end = start + job.duration_minutes
+        slot_minutes = config.slot_minutes
+
+        return (
+            start % slot_minutes == 0 and
+            end % slot_minutes == 0 and
+            0 <= start and
+            job.release_minute <= start and
+            end <= job.deadline_minute and
+            end <= config.horizon_minutes
+        )
+    
     def check_resource_capacity(self, job: Job, placement: Placement, state: ScheduleState) -> bool:
         """Require usage plus demand <= all four capacities in every occupied slot.
         Overlapping jobs are allowed when their cumulative demands fit.
@@ -45,11 +58,23 @@ class ConstraintChecker:
             bool: True if current usage plus the candidate demand fits every resource in
                 every occupied slot on the selected server. Other servers and
                 boundary-touching intervals do not contribute.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.check_resource_capacity is not implemented.')
+        server = next(
+            server for server in state.prepared.servers
+                if server.server_id == placement.server_id
+        )
+        capacity =server.capacity()
+        requirements = job.resource_requirements()
+
+
+        for slot in occupied_slots(job, placement, state.prepared.config):
+            current_usage = state.get_usage_by_slot(placement.server_id, slot)
+            expected_usage = current_usage + requirements
+            if not expected_usage.fits_within(capacity):
+                return False
+        return True
+
+
 
     def check_server_pinning(self, job: Job, placement: Placement) -> bool:
         """Accept an unpinned job or a placement matching the required server exactly.
@@ -63,11 +88,11 @@ class ConstraintChecker:
         Returns:
             bool: True when the job has no pin or its required server ID equals the
                 candidate server ID.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.check_server_pinning is not implemented.')
+        return (
+            job.required_server_id is None or
+            job.required_server_id == placement.server_id
+        )
 
     def check_colocation(self, job: Job, placement: Placement, assignments: Mapping[str, Assignment], jobs: Mapping[str, Job]) -> bool:
         """Check direct same-server edges declared in either direction.
@@ -87,11 +112,18 @@ class ConstraintChecker:
         Returns:
             bool: True if every assigned direct same-server neighbor uses the candidate
                 server. Unassigned neighbors and unrelated jobs impose no constraint.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.check_colocation is not implemented.')
+        for other_id, assignment in assignments.items():
+            other_job = jobs[other_id]
+
+            requires_same_server = (
+                other_id in job.same_server_as or 
+                job.job_id in other_job.same_server_as
+            )
+
+            if requires_same_server and assignment.server_id != placement.server_id:
+                    return False
+        return True
 
     def check_anti_affinity(self, job: Job, placement: Placement, assignments: Mapping[str, Assignment], jobs: Mapping[str, Job]) -> bool:
         """Check different-server edges in either direction for assigned neighbors only.
@@ -111,12 +143,19 @@ class ConstraintChecker:
         Returns:
             bool: True if every assigned direct different-server neighbor uses another
                 server, even when execution intervals do not overlap.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.check_anti_affinity is not implemented.')
+        for other_id, assignment in assignments.items():
+            other_job = jobs[other_id]
 
+            requires_different_server = (
+                other_id in job.different_server_from or
+                job.job_id in other_job.different_server_from
+            )
+
+            if requires_different_server and assignment.server_id == placement.server_id:
+                    return False
+        return True
+        
     def can_place(self, job: Job, placement: Placement, state: ScheduleState) -> bool:
         """Determine whether a new assignment satisfies every hard scheduling constraint.
 
@@ -135,8 +174,23 @@ class ConstraintChecker:
         Returns:
             bool: True only if all hard constraints hold. Unknown servers and duplicate
                 job assignments return False. No assignments or usage are changed.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.can_place is not implemented.')
+        assignments = state.get_assignments()
+        jobs = {
+            existing_job.job_id: existing_job
+            for existing_job in state.prepared.jobs
+        }
+
+        if placement.server_id not in [server.server_id for server in state.prepared.servers]:
+            return False
+
+        if job.job_id in assignments:
+            return False
+
+        return (
+            self.check_time_window(job, placement, state.prepared.config) and
+            self.check_server_pinning(job, placement) and
+            self.check_colocation(job, placement, assignments, jobs) and
+            self.check_anti_affinity(job, placement, assignments, jobs) and
+            self.check_resource_capacity(job, placement, state)
+        )
