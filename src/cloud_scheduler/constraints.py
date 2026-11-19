@@ -23,11 +23,9 @@ class ConstraintChecker:
             bool: True if the aligned, continuous interval starts at or after release
                 and ends at or before both deadline and horizon. The exclusive end may
                 equal either bound.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.check_time_window is not implemented.')
+        return ((placement.start_minute + job.duration_minutes <= config.horizon_minutes) and
+                (job.release_minute < placement.start_minute < job.deadline_minute))
 
     def check_resource_capacity(self, job: Job, placement: Placement, state: ScheduleState) -> bool:
         """Require usage plus demand <= all four capacities in every occupied slot.
