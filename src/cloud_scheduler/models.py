@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Mapping, TypeAlias
+from dataclasses import fields
+
 
 @dataclass(frozen=True)
 class ResourceVector:
@@ -27,11 +29,14 @@ class ResourceVector:
 
         Returns:
             ResourceVector: New component-wise sum; neither input is modified.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('Resource addition is not implemented.')
+        return ResourceVector(
+            cpu=self.cpu + other.cpu,
+            ram_gb=self.ram_gb + other.ram_gb,
+            gpu=self.gpu + other.gpu,
+            storage_gb=self.storage_gb + other.storage_gb,
+        )
+
 
     def __sub__(self, other: ResourceVector) -> ResourceVector:
         """Return component-wise difference; signed intermediate vectors are permitted.
@@ -45,12 +50,14 @@ class ResourceVector:
         Returns:
             ResourceVector: New component-wise difference, including signed intermediate
                 values; neither input is modified.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('Resource subtraction is not implemented.')
-
+        return ResourceVector(
+            cpu=self.cpu - other.cpu,
+            ram_gb=self.ram_gb - other.ram_gb,
+            gpu=self.gpu - other.gpu,
+            storage_gb=self.storage_gb - other.storage_gb,
+        )
+        
     def fits_within(self, capacity: ResourceVector) -> bool:
         """Return whether every component is <= capacity, including exact equality.
 
@@ -63,12 +70,12 @@ class ResourceVector:
         Returns:
             bool: True exactly when every demand component is no greater than the
                 corresponding capacity component.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('Component-wise comparison is not implemented.')
-
+        return all(
+            getattr(self, field.name) <= getattr(capacity, field.name) 
+            for field in fields(self)
+        )
+        
 @dataclass(frozen=True)
 class Server:
     """Unique nonempty ID and nonnegative finite capacities; CPU/GPU are integers."""
@@ -87,11 +94,13 @@ class Server:
         Returns:
             ResourceVector: CPU cores, RAM GB, GPU count and storage GB available on
                 this server.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('Capacity vector is not implemented.')
+        return ResourceVector(
+            self.cpu_capacity,
+            self.ram_capacity_gb,
+            self.gpu_capacity,
+            self.storage_capacity_gb
+        )
 
     def supports(self, job: Job) -> bool:
         """Check individual resource fit only; ignore time, pinning and other jobs.
@@ -103,11 +112,8 @@ class Server:
         Returns:
             bool: True if the job individually fits all hardware capacities. Time, pins,
                 affinity and current usage are deliberately excluded.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('Individual hardware fit is not implemented.')
+        return job.resource_requirements().fits_within(self.capacity())
 
 @dataclass(frozen=True)
 class Job:
@@ -154,12 +160,14 @@ class Job:
 
         Returns:
             ResourceVector: This job's CPU, RAM, GPU and storage demands, independent of
-                placement.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
+            placement.
         """
-        raise NotImplementedError('Requirements vector is not implemented.')
+        return ResourceVector(
+            self.cpu,
+            self.ram_gb,
+            self.gpu,
+            self.storage_gb
+        )
 
     def execution_interval(self, start_minute: int) -> tuple[int, int]:
         """Return [start, start + duration) endpoints; feasibility is checked separately.

@@ -1,7 +1,7 @@
 """Read-only hard-constraint checking contracts."""
 from typing import Mapping
 from .config import SchedulerConfig
-from .models import Assignment, Job, Placement, Server
+from .models import Assignment, Job, Placement, Server, ResourceVector
 from .state import ScheduleState
 
 class ConstraintChecker:
@@ -43,11 +43,17 @@ class ConstraintChecker:
             bool: True if current usage plus the candidate demand fits every resource in
                 every occupied slot on the selected server. Other servers and
                 boundary-touching intervals do not contribute.
-
-        Raises:
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('ConstraintChecker.check_resource_capacity is not implemented.')
+        current_usage = state.get_usage(placement.server_id, placement.start_minute)
+        expected_usage = current_usage + job.resource_requirements()
+
+        server = next(
+            server for server in state.prepared.servers
+                if server.server_id == placement.server_id
+        )
+        return expected_usage.fits_within(server.capacity())
+
+
 
     def check_server_pinning(self, job: Job, placement: Placement) -> bool:
         """Accept an unpinned job or a placement matching the required server exactly.
