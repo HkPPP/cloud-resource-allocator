@@ -9,7 +9,8 @@ class ScheduleState:
     """Track server/slot usage with exact reversible updates.
 
     Invariants: no negative/over-capacity usage, each job assigned once, intervals
-    occupy start//slot through end//slot exclusively, and failed operations are atomic."""
+    occupy start//slot through end//slot exclusively, and failed operations are atomic.
+    Assignments are undone in reverse placement order (last in, first out)."""
 
     def __init__(self, prepared: PreparedInstance) -> None:
         """Initialize empty assignments and zero usage using immutable prepared inputs.
@@ -31,6 +32,7 @@ class ScheduleState:
         }
 
         self._assignments: dict[str, Assignment] = {}
+        self._history: list[tuple[str, dict[int, ResourceVector]]] = []
 
         slot_count = (
             prepared.config.horizon_minutes // prepared.config.slot_minutes
@@ -67,6 +69,7 @@ class ScheduleState:
     def place(self, job: Job, placement: Placement) -> Assignment:
         """Atomically assign a feasible placement and increment every occupied slot.
         Raise ValueError on infeasibility or duplicate job; leave state unchanged.
+        Save the previous immutable usage values for exact reverse-order undo.
 
         Args:
             job: Validated job whose resource demands, time window and placement
@@ -90,11 +93,13 @@ class ScheduleState:
         start = placement.start_minute
         end = start + job.duration_minutes
 
-        # Calculate changes in a separate list first.
-        updated_usage = self._usage[placement.server_id].copy()
+        # Stage only occupied slots; commit after every calculation succeeds.
+        previous_usage = {}
+        updated_usage = {}
 
         for slot in occupied_slots(job, placement, self.prepared.config):
-            current = updated_usage[slot]
+            current = self._usage[placement.server_id][slot]
+            previous_usage[slot] = current
 
             updated_usage[slot] = ResourceVector(
                 cpu=current.cpu + job.cpu,
@@ -114,22 +119,24 @@ class ScheduleState:
         )
 
         # Commit after validation and calculations have succeeded.
-        self._usage[placement.server_id] = updated_usage
+        for slot, usage in updated_usage.items():
+            self._usage[placement.server_id][slot] = usage
         self._assignments[job.job_id] = assignment
+        self._history.append((job.job_id, previous_usage))
 
         return assignment
 
     def undo(self, job_id: str) -> None:
-        """Remove an existing assignment and restore exact prior resource usage.
+        """Remove the most recent assignment and restore its saved slot values.
         Raise KeyError for an absent job without changing state; undo is not idempotent.
 
-        Rebuild affected slots from the remaining assignments in insertion order.
-        This avoids floating-point subtraction residue and supports removing any
-        assignment, including one placed before other overlapping jobs. All
-        calculations finish before either usage or assignments are changed.
+        Undo must follow reverse placement order, across all servers. Saved values
+        restore fractional usage exactly, without subtraction or reconstruction.
+        Work is proportional to the removed job's occupied slots, not other jobs
+        or the full horizon. An invalid undo leaves assignments and history intact.
 
         Args:
-            job_id: Unique valid job ID identifying the existing assignment to remove.
+            job_id: ID of the most recently placed job that has not yet been undone.
 
         Returns:
             None: Removes the assignment and restores exact prior occupied-slot usage
@@ -137,41 +144,21 @@ class ScheduleState:
 
         Raises:
             KeyError: job_id is not currently assigned; state remains unchanged.
+            ValueError: job_id is assigned but is not the most recent placement;
+                state remains unchanged.
         """
         if job_id not in self._assignments:
             raise KeyError(job_id)
 
+        last_job_id, previous_usage = self._history[-1]
+        if job_id != last_job_id:
+            raise ValueError("Jobs must be undone in reverse placement order.")
+
         assignment = self._assignments[job_id]
-        jobs_by_id = {job.job_id: job for job in self.prepared.jobs}
-        affected_slots = occupied_slots(
-            jobs_by_id[job_id],
-            Placement(assignment.server_id, assignment.start_minute),
-            self.prepared.config,
-        )
-
-        updated_usage = self._usage[assignment.server_id].copy()
-        for slot in affected_slots:
-            updated_usage[slot] = ResourceVector()
-
-        for other in self._assignments.values():
-            if other.job_id == job_id or other.server_id != assignment.server_id:
-                continue
-            other_job = jobs_by_id[other.job_id]
-            other_slots = occupied_slots(
-                other_job,
-                Placement(other.server_id, other.start_minute),
-                self.prepared.config,
-            )
-            first = max(affected_slots.start, other_slots.start)
-            last = min(affected_slots.stop, other_slots.stop)
-            if first >= last:
-                continue
-            requirements = other_job.resource_requirements()
-            for slot in range(first, last):
-                updated_usage[slot] = updated_usage[slot] + requirements
-
-        self._usage[assignment.server_id] = updated_usage
+        for slot, usage in previous_usage.items():
+            self._usage[assignment.server_id][slot] = usage
         del self._assignments[job_id]
+        self._history.pop()
 
     def get_usage(self, server_id: str, minute: int) -> ResourceVector:
         """Return a snapshot for the slot containing minute (0 <= minute < horizon).
@@ -248,6 +235,7 @@ class ScheduleState:
     def copy(self) -> ScheduleState:
         """Return an independent mutable copy; prepared immutable input may be shared.
         Mutating or undoing either state must not affect the other.
+        Saved undo dictionaries are copied; their immutable vectors may be shared.
 
         Args:
             None. Uses the current instance only.
@@ -259,4 +247,5 @@ class ScheduleState:
         new_state = ScheduleState(self.prepared)
         new_state._assignments = self._assignments.copy()
         new_state._usage = {k: v.copy() for k, v in self._usage.items()}
+        new_state._history = [(job_id, usage.copy()) for job_id, usage in self._history]
         return new_state

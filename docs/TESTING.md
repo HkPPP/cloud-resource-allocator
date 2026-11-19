@@ -40,7 +40,7 @@ execution. Serializer tests cover every result field and reject nonfinite number
 | --- | --- |
 | Constraints | Exact limits for all four resources; three overlapping jobs; conflicts in the last occupied slot; both `can_place` entry points; accepted and rejected checks leave state unchanged. |
 | Relationships | Both declaration directions; multiple assigned neighbors; unrelated jobs; omitted intermediates; affinity across non-overlapping intervals. |
-| State | Interior-minute slot queries; unknown servers; invalid query bounds; duplicate placement; missing undo; overlapping undo; exact fractional-resource restoration; protected assignment snapshots. |
+| State | Interior-minute slot queries; unknown servers; invalid query bounds; duplicate placement; missing and out-of-order undo; reverse-order restoration of overlapping jobs; exact fractional-resource restoration without arithmetic; independent copied histories; protected assignment snapshots. |
 | Preprocessing and domains | Malformed scalar records; missing identity; invalid numeric types; nonfinite quantities; original input order and indices; duplicate edges; empty inputs; horizon clipping; pins that cannot satisfy hardware demands. |
 | Greedy and CSP | Empty batches and clusters; earlier start versus server order; delayed placement; invalid records within a batch; MRV ties and empty selection; domain ordering; singleton omission after filtering. |
 | Objectives and evaluation | Empty objective values; invalid priority lists; comparison symmetry; release-relative wait; every resource overflow; independent validator access; false invalid classifications; idle-server capacity-time denominators. |

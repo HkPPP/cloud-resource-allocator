@@ -74,7 +74,12 @@ PreparedInstance contains only frozen dataclasses and tuples, including domains;
 valid Job relationship fields and config objectives must be tuples after preparing.
 Keep valid ID-to-input-index pairs so reference errors retain original identity.
 Each solve copies domains and creates private state. Failed place changes nothing.
-Undo restores all affected slots and assignment entries; absent undo raises KeyError.
+Each successful placement saves the old immutable values for its occupied slots.
+Undo restores those values directly in reverse placement order across all servers.
+An absent job raises KeyError; an assigned job that is not the latest placement
+raises ValueError. Both failures leave state unchanged. Copies own independent
+usage arrays and undo history. No resource subtraction or schedule reconstruction
+is required.
 
 schedule runtime includes preparation; solve runtime excludes shared preparation.
 Use a monotonic clock and put timing_scope in result statistics. Count a search

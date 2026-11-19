@@ -53,6 +53,11 @@ Both techniques are planned extensions. Enabled unsupported options raise
 
 ## Timeouts and restoration
 
+State undo follows reverse placement order (LIFO), restoring saved resource
+values for the affected slots. Backjumping must unwind each intervening placement
+in reverse order rather than remove an earlier assignment directly. Omission
+decisions do not create state assignments or undo entries.
+
 Search uses a monotonic deadline with checks at bounded search and propagation
 intervals. Assignments, usage and domain deletions are restored on normal return,
 timeout and error. Incumbents are copied rather than retained as mutable tracker
