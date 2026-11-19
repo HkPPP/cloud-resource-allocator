@@ -1,12 +1,10 @@
 import pytest
-pending = pytest.mark.xfail(reason="Feature not implemented", raises=NotImplementedError, strict=True)
 
 import json
 from cloud_scheduler.config import SchedulerConfig
 from cloud_scheduler.models import Server
 from cloud_scheduler.schedulers.greedy import GreedyScheduler
 
-@pending
 def test_earliest_deterministic_input_order(jobs,servers,config):
     """Verify earliest deterministic input order.
 
@@ -28,7 +26,6 @@ def test_earliest_deterministic_input_order(jobs,servers,config):
     assert not a.optimality_proven
     assert solver.order_jobs(jobs)==jobs
 
-@pending
 @pytest.mark.parametrize('name',['simple','greedy_failure','gpu_scarcity','high_demand','time_constraints'])
 def test_documented_scenarios(name,repo_root):
     """Verify documented scenarios.
@@ -52,7 +49,6 @@ def test_documented_scenarios(name,repo_root):
     if 'invalid' in d['expected']:
         assert {j.job_id for j in r.invalid_jobs}==set(d['expected']['invalid'])
 
-@pending
 @pytest.mark.parametrize('empty_cluster',[False,True])
 def test_empty_inputs_and_inventory(empty_cluster,jobs,servers,config):
     """Verify empty inputs and inventory.
@@ -77,7 +73,6 @@ def test_empty_inputs_and_inventory(empty_cluster,jobs,servers,config):
     assert len(result.unscheduled_jobs) == len(submitted)
     assert result.search_nodes == 0 and not result.optimality_proven
 
-@pending
 def test_earlier_start_beats_preferred_server(jobs,servers,config):
     """Verify earlier start beats preferred server.
 
@@ -98,7 +93,6 @@ def test_earlier_start_beats_preferred_server(jobs,servers,config):
     result=GreedyScheduler().schedule([a,b],servers,config)
     assert [(a.job_id,a.server_id,a.start_minute) for a in result.assignments] == [('a','gpu',0),('b','cpu',0)]
 
-@pending
 def test_job_waits_until_capacity_is_released(jobs,servers,config):
     """Verify job waits until capacity is released.
 
@@ -118,7 +112,6 @@ def test_job_waits_until_capacity_is_released(jobs,servers,config):
     result=GreedyScheduler().schedule(js,servers,config)
     assert [a.start_minute for a in result.assignments] == [0,15]
 
-@pending
 def test_malformed_job_does_not_stop_remaining_batch(servers,config):
     """Verify malformed job does not stop remaining batch.
 

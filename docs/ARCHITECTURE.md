@@ -20,7 +20,7 @@ test checks that these sections and parameter descriptions remain present.
 | constraints | ConstraintChecker: pure checks of time, cumulative resources, pins and direct conditional relationships. |
 | state | ScheduleState: private usage arrays and temporary assignments with atomic placement, exact undo and independent copies. |
 | objectives | Direction and abstract Objective; MaxJobs, MinWait, MinActiveServers; compare_schedules defines the lexicographic comparison interface. |
-| io | UTF-8 JSON transport via pathlib, semantic config/inventory/raw-record loaders. Only read_json/write_json work now. |
+| io | UTF-8 JSON transport via pathlib, semantic config/inventory/raw-record loaders. Configuration and inventory loaders validate inputs; the job loader preserves raw records for indexed preprocessing. |
 | schedulers/base | BaseScheduler: shared raw-input pipeline; solve takes an immutable prepared input for fair benchmark reuse. |
 | schedulers/greedy | GreedyScheduler: input order, earliest start, server input order, irrevocable first fit. |
 | schedulers/csp | CSPScheduler: configurable search/propagation hooks, incumbent snapshots, reversible domains and admissible bounds. |

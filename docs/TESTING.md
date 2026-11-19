@@ -30,8 +30,9 @@ its behavioral assertions to pass without that marker.
 An unavailable pipeline dependency can prevent downstream assertions from being
 reached. Expected-failure counts therefore describe implementation coverage,
 rather than establishing correctness. The [development roadmap](IMPLEMENTATION_PLAN.md)
-tracks these dependencies. The CLI unavailable-feature test is replaced by an
-execution test when the input-loading and scheduling pipeline is available.
+tracks these dependencies. CLI execution tests require valid Greedy JSON output from both Python entry
+points, per-submission status accounting, and concise errors for unsupported CSP
+execution. Serializer tests cover every result field and reject nonfinite numbers.
 
 ## Correctness tests
 

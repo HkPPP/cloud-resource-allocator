@@ -1,5 +1,6 @@
 """Scheduling configuration and validation contracts."""
 from dataclasses import dataclass
+from math import isfinite
 
 OBJECTIVE_NAMES = frozenset({"max_jobs", "min_wait", "min_active_servers"})
 
@@ -40,6 +41,30 @@ class SchedulerConfig:
         Raises:
             ValueError: A type, range, resolution, objective or option-combination rule
                 is violated.
-            NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError('Configuration validation is not implemented.')
+        for name in ("horizon_minutes", "slot_minutes"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{name} must be a positive integer.")
+        if self.horizon_minutes % self.slot_minutes:
+            raise ValueError("slot_minutes must evenly divide horizon_minutes.")
+
+        if not isinstance(self.objectives, tuple) or not self.objectives:
+            raise ValueError("objectives must be a nonempty tuple of supported names.")
+        if any(not isinstance(name, str) or name not in OBJECTIVE_NAMES
+               for name in self.objectives):
+            raise ValueError("objectives contains an unsupported objective name.")
+        if len(set(self.objectives)) != len(self.objectives):
+            raise ValueError("objectives must not contain duplicates.")
+
+        timeout = self.search_timeout_seconds
+        if timeout is not None:
+            if (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
+                    or timeout <= 0 or (isinstance(timeout, float) and not isfinite(timeout))):
+                raise ValueError("search_timeout_seconds must be positive and finite, or None.")
+
+        for name in ("use_mrv", "use_forward_checking", "use_backjumping", "use_mac"):
+            if not isinstance(getattr(self, name), bool):
+                raise ValueError(f"{name} must be a boolean.")
+        if self.use_mac and self.use_backjumping:
+            raise ValueError("MAC and backjumping cannot both be enabled.")

@@ -1,11 +1,47 @@
 """Portable UTF-8 JSON transport and semantic loading interfaces."""
 import json
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Sequence
 from .config import SchedulerConfig
-from .models import RawJob, Server
+from .models import RawJob, ScheduleResult, Server
+from .preprocessing import validate_servers
 
 PathLike = str | Path
+
+def serialize_result(result: ScheduleResult) -> str:
+    """Serialize a schedule result as indented, standards-compliant JSON.
+
+    Nested assignment and classification records become JSON objects, tuples
+    become arrays, and absent optional values become null. All performance and
+    proof fields are preserved. Non-ASCII characters are escaped so output is
+    portable across Windows and Ubuntu terminals without changing decoded IDs.
+    The result and its statistics mapping are not modified.
+
+    Args:
+        result: Schedule output containing assignments, invalid and unscheduled
+            submissions, runtime in milliseconds, search statistics and proof status.
+
+    Returns:
+        str: Indented JSON text containing every ScheduleResult field, without a
+            trailing newline. The caller can display the text or save it to a file.
+
+    Raises:
+        TypeError: A field or statistics value cannot be serialized as JSON.
+        ValueError: A numeric value is NaN or infinite.
+    """
+    payload = {
+        "algorithm": result.algorithm,
+        "assignments": [asdict(item) for item in result.assignments],
+        "invalid_jobs": [asdict(item) for item in result.invalid_jobs],
+        "unscheduled_jobs": [asdict(item) for item in result.unscheduled_jobs],
+        "runtime_ms": result.runtime_ms,
+        "search_nodes": result.search_nodes,
+        "timed_out": result.timed_out,
+        "optimality_proven": result.optimality_proven,
+        "statistics": dict(result.statistics),
+    }
+    return json.dumps(payload, indent=2, ensure_ascii=True, allow_nan=False)
 
 def read_json(path: PathLike) -> object:
     """Read UTF-8 JSON (including Windows BOM); preserve raw per-job records.
@@ -55,7 +91,8 @@ def write_json(path: PathLike, value: object) -> None:
 
 def load_config(path: PathLike) -> SchedulerConfig:
     """Read a config object, convert objectives to tuple, reject unknown keys and
-    types, then validate. Raise ValueError for malformed semantic configuration.
+    types, then validate. Structural type errors raise TypeError; invalid keys
+    and settings raise ValueError.
 
     Args:
         path: Input or output filesystem path as str or pathlib.Path; relative paths are
@@ -66,15 +103,31 @@ def load_config(path: PathLike) -> SchedulerConfig:
             and semantic validation completed.
 
     Raises:
-        ValueError: Configuration structure, keys or values are invalid.
+        ValueError: Keys or values are invalid.
+        TypeError: The root is not an object or objectives is not an array.
         OSError: The input cannot be read.
-        NotImplementedError: This feature is not yet implemented.
     """
-    raise NotImplementedError('Configuration loading is not implemented.')
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise TypeError("Configuration must be a JSON object.")
+
+    unknown = payload.keys() - {item.name for item in fields(SchedulerConfig)}
+    if unknown:
+        raise ValueError(f"Unknown configuration fields: {', '.join(sorted(unknown))}.")
+
+    if "objectives" in payload:
+        if not isinstance(payload["objectives"], list):
+            raise TypeError("Configuration objectives must be a JSON array.")
+        payload["objectives"] = tuple(payload["objectives"])
+
+    config = SchedulerConfig(**payload)
+    config.validate()
+    return config
 
 def load_servers(path: PathLike) -> tuple[Server, ...]:
     """Read a JSON array of server objects, construct and validate in input order.
-    Raise ValueError for invalid inventory; file/JSON errors propagate.
+    Structural type errors raise TypeError. Invalid record fields, IDs and
+    capacities raise ValueError; file/JSON errors propagate.
 
     Args:
         path: Input or output filesystem path as str or pathlib.Path; relative paths are
@@ -84,15 +137,28 @@ def load_servers(path: PathLike) -> tuple[Server, ...]:
         tuple[Server, ...]: Constructed and validated inventory in original file order.
 
     Raises:
-        ValueError: Inventory structure, IDs or quantities are invalid.
+        TypeError: The root is not an array or a server record is not an object.
+        ValueError: Server fields, IDs or resource quantities are invalid.
         OSError: The input cannot be read.
-        NotImplementedError: This feature is not yet implemented.
     """
-    raise NotImplementedError('Inventory loading is not implemented.')
+    payload = read_json(path)
+    if not isinstance(payload, list):
+        raise TypeError("Server inventory must be a JSON array.")
+
+    servers = []
+    for index, record in enumerate(payload):
+        if not isinstance(record, dict):
+            raise TypeError(f"Server at index {index} must be a JSON object.")
+        try:
+            servers.append(Server(**record))
+        except TypeError as error:
+            raise ValueError(f"Invalid server fields at index {index}: {error}") from error
+
+    return validate_servers(servers)
 
 def load_jobs(path: PathLike) -> Sequence[RawJob]:
     """Read an array, preserving malformed entries and original indices for
-    preprocessing; reject a non-array root with ValueError. Never construct Job
+    preprocessing; reject a non-array root with TypeError. Never construct Job
     eagerly in a way that aborts a batch on a missing field.
 
     Args:
@@ -104,8 +170,10 @@ def load_jobs(path: PathLike) -> Sequence[RawJob]:
             individual entries for indexed preprocessing errors.
 
     Raises:
-        ValueError: The file root is not a JSON array.
+        TypeError: The file root is not a JSON array.
         OSError: The input cannot be read.
-        NotImplementedError: This feature is not yet implemented.
     """
-    raise NotImplementedError('Raw job loading is not implemented.')
+    payload = read_json(path)
+    if not isinstance(payload, list):
+        raise TypeError("Job input must be a JSON array.")
+    return payload
