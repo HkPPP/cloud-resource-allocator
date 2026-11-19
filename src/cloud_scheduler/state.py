@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Mapping
 from .models import Assignment, Job, Placement, ResourceVector
 from .preprocessing import PreparedInstance
+from .time_utils import occupied_slots
 
 class ScheduleState:
     """Track server/slot usage with exact reversible updates.
@@ -86,17 +87,13 @@ class ScheduleState:
                 f"Cannot place job {job.job_id} on {placement.server_id}"
             )
 
-        slot_minutes = self.prepared.config.slot_minutes
         start = placement.start_minute
         end = start + job.duration_minutes
-
-        first_slot = start // slot_minutes
-        end_slot = end // slot_minutes
 
         # Calculate changes in a separate list first.
         updated_usage = self._usage[placement.server_id].copy()
 
-        for slot in range(first_slot, end_slot):
+        for slot in occupied_slots(job, placement, self.prepared.config):
             current = updated_usage[slot]
 
             updated_usage[slot] = ResourceVector(
@@ -126,6 +123,11 @@ class ScheduleState:
         """Remove an existing assignment and restore exact prior resource usage.
         Raise KeyError for an absent job without changing state; undo is not idempotent.
 
+        Rebuild affected slots from the remaining assignments in insertion order.
+        This avoids floating-point subtraction residue and supports removing any
+        assignment, including one placed before other overlapping jobs. All
+        calculations finish before either usage or assignments are changed.
+
         Args:
             job_id: Unique valid job ID identifying the existing assignment to remove.
 
@@ -139,20 +141,37 @@ class ScheduleState:
         if job_id not in self._assignments:
             raise KeyError(job_id)
 
-        assignment = self._assignments.pop(job_id)
-        start_slot = assignment.start_minute // self.prepared.config.slot_minutes
-        end_slot = assignment.end_minute // self.prepared.config.slot_minutes
+        assignment = self._assignments[job_id]
+        jobs_by_id = {job.job_id: job for job in self.prepared.jobs}
+        affected_slots = occupied_slots(
+            jobs_by_id[job_id],
+            Placement(assignment.server_id, assignment.start_minute),
+            self.prepared.config,
+        )
 
         updated_usage = self._usage[assignment.server_id].copy()
-        for slot in range(start_slot, end_slot):
-            current = updated_usage[slot]
-            updated_usage[slot] = ResourceVector(
-                cpu=current.cpu - self.prepared.jobs[job_id].cpu,
-                ram_gb=current.ram_gb - self.prepared.jobs[job_id].ram_gb,
-                gpu=current.gpu - self.prepared.jobs[job_id].gpu,
-                storage_gb=current.storage_gb - self.prepared.jobs[job_id].storage_gb,
+        for slot in affected_slots:
+            updated_usage[slot] = ResourceVector()
+
+        for other in self._assignments.values():
+            if other.job_id == job_id or other.server_id != assignment.server_id:
+                continue
+            other_job = jobs_by_id[other.job_id]
+            other_slots = occupied_slots(
+                other_job,
+                Placement(other.server_id, other.start_minute),
+                self.prepared.config,
             )
+            first = max(affected_slots.start, other_slots.start)
+            last = min(affected_slots.stop, other_slots.stop)
+            if first >= last:
+                continue
+            requirements = other_job.resource_requirements()
+            for slot in range(first, last):
+                updated_usage[slot] = updated_usage[slot] + requirements
+
         self._usage[assignment.server_id] = updated_usage
+        del self._assignments[job_id]
 
     def get_usage(self, server_id: str, minute: int) -> ResourceVector:
         """Return a snapshot for the slot containing minute (0 <= minute < horizon).

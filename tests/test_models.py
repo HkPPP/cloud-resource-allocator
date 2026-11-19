@@ -23,7 +23,6 @@ def test_declarative_defaults_and_immutability():
     assert SchedulerConfig().objectives==("max_jobs","min_wait")
     assert UNASSIGNED is not None
 
-@pending
 def test_resource_arithmetic():
     """Verify resource arithmetic.
 
@@ -38,7 +37,6 @@ def test_resource_arithmetic():
     assert a-b==ResourceVector(1,2,1,5)
     assert b-a==ResourceVector(-1,-2,-1,-5)
 
-@pending
 @pytest.mark.parametrize("demand, expected", [(ResourceVector(4,16,1,100),True),(ResourceVector(5,1),False),(ResourceVector(1,17),False),(ResourceVector(1,1,2),False),(ResourceVector(1,1,0,101),False)])
 def test_capacity_comparison(demand,expected):
     """Verify capacity comparison.
@@ -84,7 +82,6 @@ def test_unresolved_deadline():
     with pytest.raises(ValueError):
         Job("x",1,1,15).latest_start()
 
-@pending
 def test_resource_arithmetic_keeps_operands_unchanged():
     """Verify resource arithmetic keeps operands unchanged.
 
@@ -100,7 +97,6 @@ def test_resource_arithmetic_keeps_operands_unchanged():
     assert a-b == ResourceVector(-1,0.25,1,2)
     assert a == ResourceVector(1,0.5,1,2.5) and b == ResourceVector(2,0.25,0,0.5)
 
-@pending
 def test_supports_is_hardware_only():
     """Verify supports is hardware only.
 

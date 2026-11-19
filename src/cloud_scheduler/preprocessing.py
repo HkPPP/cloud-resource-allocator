@@ -19,14 +19,41 @@ _RELATIONSHIP_FIELDS = ("same_server_as", "different_server_from")
 
 
 def _is_id(value: object) -> bool:
+    """Check whether an input can identify a job or server.
+
+    Args:
+        value: Untrusted identifier from a raw record or relationship declaration.
+
+    Returns:
+        bool: True for a nonempty string; False for empty strings or other types.
+    """
     return isinstance(value, str) and bool(value)
 
 
 def _is_integer(value: object) -> bool:
+    """Recognize integer quantities while excluding Python booleans.
+
+    Args:
+        value: Untrusted time or discrete-resource quantity.
+
+    Returns:
+        bool: True for an integer that is not a bool; sign is checked separately.
+    """
     return isinstance(value, int) and not isinstance(value, bool)
 
 
 def _valid_resources(cpu: object, ram: object, gpu: object, storage: object) -> bool:
+    """Validate the types and ranges of all four resource quantities.
+
+    Args:
+        cpu: Nonnegative integer CPU core count, excluding bool.
+        ram: Nonnegative finite numeric RAM quantity in GB, excluding bool.
+        gpu: Nonnegative integer GPU count, excluding bool.
+        storage: Nonnegative finite numeric storage quantity in GB, excluding bool.
+
+    Returns:
+        bool: True only when every component has an accepted type and range.
+    """
     return (
         _is_integer(cpu) and cpu >= 0
         and _is_integer(gpu) and gpu >= 0
@@ -108,6 +135,15 @@ def validate_servers(servers: Sequence[Server]) -> tuple[Server, ...]:
 
 
 def _raw_job_id(record: RawJob) -> str | None:
+    """Extract an identifiable job ID without constructing or validating a job.
+
+    Args:
+        record: Original submission, which may be a Job, mapping or malformed value.
+
+    Returns:
+        str | None: Nonempty string ID if identifiable; otherwise None. Unrelated
+            malformed fields do not prevent recognizing duplicate IDs.
+    """
     if isinstance(record, Job):
         value = record.job_id
     elif isinstance(record, Mapping):
@@ -118,6 +154,17 @@ def _raw_job_id(record: RawJob) -> str | None:
 
 
 def _job_errors(job: Job, slot: int) -> dict[str, str]:
+    """Collect independent field errors for a job with a resolved deadline.
+
+    Args:
+        job: Job-shaped record whose values may still have invalid types or ranges.
+        slot: Validated positive integer slot resolution, in minutes.
+
+    Returns:
+        dict[str, str]: Stable error codes mapped to human-readable reasons;
+            empty when fields are valid. Cluster capacity and reference existence
+            are evaluated separately, and the job is not modified.
+    """
     errors = {}
     if not _is_id(job.job_id):
         errors["INVALID_ID"] = "job_id must be a nonempty string."

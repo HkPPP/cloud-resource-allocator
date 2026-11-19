@@ -1,12 +1,10 @@
 import pytest
-pending = pytest.mark.xfail(reason="Feature not implemented", raises=NotImplementedError, strict=True)
 
 from dataclasses import replace
 from cloud_scheduler.constraints import ConstraintChecker
 from cloud_scheduler.models import Assignment, Job, Placement
 from cloud_scheduler.state import ScheduleState
 
-@pending
 @pytest.mark.parametrize("changes",[{"cpu":3},{"ram_gb":13},{"gpu":1},{"storage_gb":91}])
 def test_cumulative_resource_overflow(changes,prepared,jobs):
     """Verify cumulative resource overflow.
@@ -26,7 +24,6 @@ def test_cumulative_resource_overflow(changes,prepared,jobs):
     state.place(prepared.jobs[0],Placement("gpu",0))
     assert not ConstraintChecker().check_resource_capacity(replace(jobs[1],**changes),Placement('gpu',0),state)
 
-@pending
 @pytest.mark.parametrize("start,expected",[(0,True),(45,True),(60,False),(-15,False),(1,False)])
 def test_time_window(start,expected,jobs,config):
     """Verify time window.
@@ -44,7 +41,6 @@ def test_time_window(start,expected,jobs,config):
     """
     assert ConstraintChecker().check_time_window(jobs[0],Placement('gpu',start),config) is expected
 
-@pending
 def test_pin(jobs):
     """Verify pin.
 
@@ -59,7 +55,6 @@ def test_pin(jobs):
     assert c.check_server_pinning(j,Placement('cpu',0))
     assert not c.check_server_pinning(j,Placement('gpu',0))
 
-@pending
 @pytest.mark.parametrize("relation,method,same_ok",[("same_server_as","check_colocation",True),("different_server_from","check_anti_affinity",False)])
 @pytest.mark.parametrize("declarer",[0,1])
 def test_relationship_both_directions(relation,method,same_ok,declarer,jobs):
@@ -87,7 +82,6 @@ def test_relationship_both_directions(relation,method,same_ok,declarer,jobs):
     assert check(js[1],Placement('gpu',15),assigned,mapping) is same_ok
     assert check(js[1],Placement('cpu',15),assigned,mapping) is (not same_ok)
 
-@pending
 def test_concurrent_and_touching(prepared,jobs):
     """Verify concurrent and touching.
 
@@ -105,7 +99,6 @@ def test_concurrent_and_touching(prepared,jobs):
     assert state.can_place(replace(jobs[1],cpu=4),Placement('gpu',15))
     assert not state.can_place(replace(jobs[1],cpu=4),Placement('gpu',0))
 
-@pending
 def test_skipped_middle_does_not_imply_transitive_colocation():
     """Verify skipped middle does not imply transitive colocation.
 
@@ -123,7 +116,6 @@ def test_skipped_middle_does_not_imply_transitive_colocation():
     assert check.check_colocation(c,Placement('cpu',0),assigned,mapping)
     assert check.check_anti_affinity(c,Placement('cpu',0),assigned,mapping)
 
-@pending
 @pytest.mark.parametrize(
     "release,deadline,duration,start,expected",
     [(15,45,15,0,False), (15,45,15,15,True), (15,45,15,30,True),
@@ -149,7 +141,6 @@ def test_time_window_checks_both_bounds(release, deadline, duration, start, expe
     job = Job('j', 1, 1, duration, release_minute=release, deadline_minute=deadline)
     assert ConstraintChecker().check_time_window(job, Placement('gpu', start), config) is expected
 
-@pending
 @pytest.mark.parametrize('field,capacity', [('cpu',4), ('ram_gb',16), ('gpu',1), ('storage_gb',100)])
 @pytest.mark.parametrize('overflow', [False, True])
 def test_each_resource_exact_capacity_and_overflow(field, capacity, overflow, state_factory):
@@ -171,7 +162,6 @@ def test_each_resource_exact_capacity_and_overflow(field, capacity, overflow, st
     state = state_factory([job])
     assert ConstraintChecker().check_resource_capacity(job, Placement('gpu',0),state) is (not overflow)
 
-@pending
 def test_capacity_uses_sum_of_three_overlapping_jobs(state_factory):
     """Verify capacity uses sum of three overlapping jobs.
 
@@ -189,7 +179,6 @@ def test_capacity_uses_sum_of_three_overlapping_jobs(state_factory):
     assert not ConstraintChecker().check_resource_capacity(jobs[2],Placement('gpu',15),state)
     assert ConstraintChecker().check_resource_capacity(jobs[2],Placement('cpu',15),state)
 
-@pending
 def test_capacity_checks_last_occupied_slot(state_factory):
     """Verify capacity checks last occupied slot.
 
@@ -206,7 +195,6 @@ def test_capacity_checks_last_occupied_slot(state_factory):
     state.place(blocker,Placement('gpu',30))
     assert not ConstraintChecker().check_resource_capacity(candidate,Placement('gpu',0),state)
 
-@pending
 @pytest.mark.parametrize('checker_method', ['can_place','state_can_place'])
 @pytest.mark.parametrize('kind', ['unknown_server','duplicate','window','pin','capacity','colocation','anti_affinity'])
 def test_can_place_rejects_every_hard_violation_without_mutation(checker_method,kind,state_factory):
@@ -243,7 +231,6 @@ def test_can_place_rejects_every_hard_violation_without_mutation(checker_method,
     assert dict(state.get_assignments()) == before
     assert state.get_usage('gpu',0) == usage
 
-@pending
 @pytest.mark.parametrize('method,relation', [('check_colocation','same_server_as'),('check_anti_affinity','different_server_from')])
 def test_all_assigned_relationship_neighbors_are_checked(method,relation):
     """Verify all assigned relationship neighbors are checked.
@@ -263,7 +250,6 @@ def test_all_assigned_relationship_neighbors_are_checked(method,relation):
     # One neighbor violates each relation, even though the first may satisfy it.
     assert not getattr(ConstraintChecker(),method)(candidate,Placement('gpu',30),assignments,mapping)
 
-@pending
 def test_unrelated_assigned_jobs_do_not_create_affinity_constraints(jobs):
     """Verify unrelated assigned jobs do not create affinity constraints.
 
@@ -281,7 +267,6 @@ def test_unrelated_assigned_jobs_do_not_create_affinity_constraints(jobs):
         assert checker.check_colocation(jobs[1],Placement(server,0),assigned,mapping)
         assert checker.check_anti_affinity(jobs[1],Placement(server,0),assigned,mapping)
 
-@pending
 @pytest.mark.parametrize('checker_method', ['can_place','state_can_place'])
 def test_can_place_accepts_feasible_candidate_without_mutation(checker_method,state_factory,jobs):
     """Accept a valid overlapping candidate while keeping the tracker unchanged.
