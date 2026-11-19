@@ -3,6 +3,7 @@ from typing import Mapping
 from .config import SchedulerConfig
 from .models import Assignment, Job, Placement, Server, ResourceVector
 from .state import ScheduleState
+from .time_utils import occupied_slots
 
 class ConstraintChecker:
     """All checks are pure; direct relationships are symmetric and conditional."""
@@ -44,14 +45,22 @@ class ConstraintChecker:
                 every occupied slot on the selected server. Other servers and
                 boundary-touching intervals do not contribute.
         """
-        current_usage = state.get_usage(placement.server_id, placement.start_minute)
-        expected_usage = current_usage + job.resource_requirements()
+        
 
         server = next(
             server for server in state.prepared.servers
                 if server.server_id == placement.server_id
         )
-        return expected_usage.fits_within(server.capacity())
+        capacity =server.capacity()
+        requirements = job.resource_requirements()
+
+
+        for slot in occupied_slots(job, placement, state.prepared.config):
+            current_usage = state.get_usage_by_slot(placement.server_id, slot)
+            expected_usage = current_usage + requirements
+            if not expected_usage.fits_within(capacity):
+                return False
+        return True
 
 
 

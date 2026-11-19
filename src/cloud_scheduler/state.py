@@ -171,6 +171,34 @@ class ScheduleState:
         slot_index = minute // self.prepared.config.slot_minutes
         return self._usage[server_id][slot_index]
 
+    def get_usage_by_slot(self, server_id: str, slot_index: int) -> ResourceVector:
+        """Return resource usage for a specific server and slot.
+        Args:
+            server_id: ID of a server in the prepared inventory.
+            slot_index: Zero-based slot index, from 0 through slot_count - 1.
+
+        Returns:
+            ResourceVector: Immutable resource usage for the selected slot,
+                including all concurrently assigned jobs.
+
+        Raises:
+            KeyError: The server ID is unknown.
+            TypeError: slot_index is not an integer, or is a boolean.
+            ValueError: slot_index is outside the available slots.
+        """
+        if server_id not in self._servers:
+            raise KeyError(server_id)
+
+        if isinstance(slot_index, bool) or not isinstance(slot_index, int):
+            raise TypeError(f"Minute must be an integer, not {type(slot_index)}")
+
+        usage = self._usage[server_id]
+
+        if not 0 <= slot_index < len(usage):
+            raise ValueError("slot_index is outside the available slots")
+
+        return usage[slot_index]
+
     def get_assignments(self) -> Mapping[str, Assignment]:
         """Return an immutable view or detached snapshot keyed by unique valid job ID.
 
