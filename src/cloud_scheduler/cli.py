@@ -36,5 +36,5 @@ def main(argv: list[str] | None = None) -> int:
         scheduler = GreedyScheduler() if args.algorithm == "greedy" else CSPScheduler()
         result = scheduler.schedule(jobs, servers, config)
         raise NotImplementedError('Schedule result serialization is not implemented.')
-    except (NotImplementedError, ValueError, OSError) as error:
+    except (NotImplementedError, TypeError, ValueError, OSError) as error:
         parser.exit(2, f"{error}\n")

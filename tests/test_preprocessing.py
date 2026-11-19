@@ -141,7 +141,6 @@ def test_invalid_target_does_not_cascade(jobs,servers,config):
     assert [j.job_id for j in p.jobs]==["a"]
     assert p.jobs[0].same_server_as==()
 
-@pending
 @pytest.mark.parametrize("changes", [{"objectives":("unsupported",)},{"objectives":("max_jobs","max_jobs")},{"objectives":()},{"slot_minutes":0},{"slot_minutes":7},{"slot_minutes":True},{"horizon_minutes":0},{"search_timeout_seconds":-1},{"search_timeout_seconds":float('inf')}])
 def test_bad_config(changes,config):
     """Verify bad config.
@@ -157,7 +156,6 @@ def test_bad_config(changes,config):
     with pytest.raises(ValueError):
         validate_config(replace(config,**changes))
 
-@pending
 @pytest.mark.parametrize("inventory", [(Server("x",-1,1),),(Server("x",1,1),Server("x",2,2))])
 def test_bad_servers(inventory):
     """Verify bad servers.
@@ -172,7 +170,6 @@ def test_bad_servers(inventory):
     with pytest.raises(ValueError):
         validate_servers(inventory)
 
-@pending
 def test_valid_config_and_empty_inventory(config):
     """Verify valid config and empty inventory.
 
@@ -283,7 +280,6 @@ def test_malformed_times_are_invalid(changes,jobs,config):
     valid,invalid=validate_jobs([replace(jobs[0],**changes)],config)
     assert not valid and invalid[0].error_codes
 
-@pending
 @pytest.mark.parametrize('changes',[{'horizon_minutes':True},{'slot_minutes':1.5},{'objectives':'max_jobs'},{'search_timeout_seconds':0},{'search_timeout_seconds':True},{'use_mrv':1},{'use_mac':True,'use_backjumping':True}])
 def test_config_type_and_combination_errors(changes,config):
     """Verify config type and combination errors.
